@@ -136,6 +136,9 @@ int mandelbrot(void * s)
 	double X, Y;
 	stringstream ss;
 
+	ss.setf(ios::fixed,ios::floatfield);
+	ss.precision(2);
+
 	TTF_Init();
 
 	if((font = TTF_OpenFont(FONT, FONT_SIZE)) == NULL)
@@ -147,9 +150,9 @@ int mandelbrot(void * s)
 	SDL_FillRect(t->screen, NULL, SDL_MapRGB(t->screen->format, 0xFF, 0xFF, 0xFF));
 	SDL_Flip(t->screen);
 
-	for(uint16_t x = (t->screen->w / 40); x < (t->screen->w - (t->screen->w / 40)); x++)
+	for(uint16_t x = (t->screen->w / 30); x < (t->screen->w - (t->screen->w / 30)); x++)
 	{
-		for(uint16_t y = (t->screen->h / 40); y < (t->screen->h - (t->screen->h / 40)); y++)
+		for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
 		{
 			X = (static_cast<double>(x * abs(t->min_real - t->max_real)) / static_cast<double>(t->screen->w)) + (t->min_real);
 			Y = (static_cast<double>(y * abs(t->min_im - t->max_im)) / static_cast<double>(t->screen->h)) + (t->min_im);
@@ -173,26 +176,30 @@ int mandelbrot(void * s)
 			SDL_Flip(t->screen);
 	}
 
-	drawrectangle(t->screen, t->screen->w/2, t->screen->h/2, t->screen->w - (2*(t->screen->w/40)), t->screen->h - (2*(t->screen->h/40)), 0x00, 0x00, 0x00);
+	drawrectangle(t->screen, t->screen->w/2, t->screen->h/2, t->screen->w - (2*(t->screen->w/30)), t->screen->h - (2*(t->screen->h/30)), 0x00, 0x00, 0x00);
 
 	TTF_CloseFont(font);
 	font = TTF_OpenFont(FONT, FONT_SIZE / 1.4);
 
-	for(uint16_t x = (t->screen->w / 40); x < (t->screen->w - (t->screen->w / 40)); x++)
-		if(!(x % (t->screen->w / 40)))
+	for(uint16_t x = (t->screen->w / 30); x < (t->screen->w - (t->screen->w / 30)); x++)
+		if(!(x % (t->screen->w / 10)))
 		{
-			drawrectangle(t->screen, x - (t->screen->w/40), (t->screen->h/40), 1, 5, 0x00, 0x00, 0x00);
-			drawrectangle(t->screen, x - (t->screen->w/40), t->screen->h - (t->screen->h/40), 1, 5, 0x00, 0x00, 0x00);
+			//drawrectangle(t->screen, x - (t->screen->w/40), (t->screen->h/40), 1, 5, 0x00, 0x00, 0x00);
+			//drawrectangle(t->screen, x - (t->screen->w/40), t->screen->h - (t->screen->h/40), 1, 5, 0x00, 0x00, 0x00);
+			drawrectangle(t->screen, x, (t->screen->h/30), 1, 5, 0x00, 0x00, 0x00);
+			drawrectangle(t->screen, x, t->screen->h - (t->screen->h/30), 1, 5, 0x00, 0x00, 0x00);
 		}
 
-	for(uint16_t y = (t->screen->h / 40); y < (t->screen->h - (t->screen->h / 40)); y++)
-		if(!(y % (t->screen->h / 40)))
+	for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
+		if(!(y % (t->screen->h / 10)))
 		{
-			drawrectangle(t->screen, (t->screen->w/40), y - (t->screen->h/40), 5, 1, 0x00, 0x00, 0x00);
-			drawrectangle(t->screen, t->screen->w - (t->screen->w/40), y - (t->screen->h/40), 5, 1, 0x00, 0x00, 0x00);
+			//drawrectangle(t->screen, (t->screen->w/40), y - (t->screen->h/40), 5, 1, 0x00, 0x00, 0x00);
+			//drawrectangle(t->screen, t->screen->w - (t->screen->w/40), y - (t->screen->h/40), 5, 1, 0x00, 0x00, 0x00);
+			drawrectangle(t->screen, (t->screen->w/30), y, 5, 1, 0x00, 0x00, 0x00);
+			drawrectangle(t->screen, t->screen->w - (t->screen->w/30), y, 5, 1, 0x00, 0x00, 0x00);
 		}
 
-	for(uint16_t x = (t->screen->w / 40); x < (t->screen->w - (t->screen->w / 40)); x++)
+	for(uint16_t x = (t->screen->w / 30); x < (t->screen->w - (t->screen->w / 30)); x++)
 	{
 		X = (static_cast<double>(x * abs(t->min_real - t->max_real)) / static_cast<double>(t->screen->w)) + (t->min_real);
 
@@ -204,14 +211,14 @@ int mandelbrot(void * s)
 		}
 	}
 
-	for(uint16_t y = (t->screen->h / 40); y < (t->screen->h - (t->screen->h / 40)); y++)
+	for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
 	{
 		Y = (static_cast<double>(y * abs(t->min_im - t->max_im)) / static_cast<double>(t->screen->h)) + (t->min_im);
 
 		if(!(y % (t->screen->h / 10)))
 		{
 			ss << Y;
-			putstring(t->screen, font, ss.str().c_str(), (t->screen->w/40)/2, y, 0x00, 0x00, 0x00);
+			putstring(t->screen, font, ss.str().c_str(), (t->screen->w/30)/2, y, 0x00, 0x00, 0x00);
 			ss.str("");
 		}
 	}
