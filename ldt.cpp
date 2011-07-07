@@ -21,6 +21,8 @@ typedef struct Thread
 	double max_im;
 }Thread;
 
+bool alive;
+
 int mandelbrot(void *);
 void putpixel(SDL_Surface *, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t);
 void drawrectangle(SDL_Surface *, uint16_t, uint16_t, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t);
@@ -105,6 +107,7 @@ int main(int argc, char ** argv)
 		exit(1);
 	}
 
+	alive = true;
 	t.screen = screen;
 	thr = SDL_CreateThread(mandelbrot, static_cast<void *>(&t));
 
@@ -116,6 +119,7 @@ int main(int argc, char ** argv)
 			{
 				case SDL_QUIT:
 					pressed = 1;
+					alive = false;
 					break;
 
 			}
@@ -154,6 +158,9 @@ int mandelbrot(void * s)
 	{
 		for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
 		{
+			if(alive == false)
+				return -1;
+
 			X = (static_cast<double>(x * abs(t->min_real - t->max_real)) / static_cast<double>(t->screen->w)) + (t->min_real);
 			Y = abs(t->min_im - t->max_im) - (static_cast<double>(y * abs(t->min_im - t->max_im)) / static_cast<double>(t->screen->h)) + (t->min_im);
 			complex<double> z;
@@ -168,7 +175,7 @@ int mandelbrot(void * s)
 			}
 
 			//putpixel(t->screen, x, y, 0xFF / count, 0xFF / count, 0xFF / count);
-			putpixel(t->screen, x, y, t->iterations - 3*count, t->iterations - 3*count, t->iterations - count);
+			putpixel(t->screen, x, y, t->iterations - (2*count), t->iterations - (2*count), t->iterations - count);
 			//putpixel(t->screen, x, y, 0x00, 0x00, t->iterations - count);
 		}
 
