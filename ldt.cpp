@@ -137,7 +137,7 @@ int mandelbrot(void * s)
 	stringstream ss;
 
 	ss.setf(ios::fixed,ios::floatfield);
-	ss.precision(2);
+	ss.precision(4);
 
 	TTF_Init();
 
@@ -168,7 +168,7 @@ int mandelbrot(void * s)
 			}
 
 			//putpixel(t->screen, x, y, 0xFF / count, 0xFF / count, 0xFF / count);
-			putpixel(t->screen, x, y, t->iterations - 2*count, t->iterations - 2*count, t->iterations - count);
+			putpixel(t->screen, x, y, t->iterations - 3*count, t->iterations - 3*count, t->iterations - count);
 			//putpixel(t->screen, x, y, 0x00, 0x00, t->iterations - count);
 		}
 
