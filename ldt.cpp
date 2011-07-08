@@ -15,16 +15,19 @@ using namespace std;
 typedef struct Thread
 {
 	SDL_Surface * screen;
-	double iterations; //Numero massimo di iterazioni da compiere per determinare l'appartenenza della successione all'insieme di Mandelbrot
+	double iterations; //Numero massimo di iterazioni da compiere per determinare l'appartenenza della successione all'insieme di Mandelbrot|Julia
 	double min_real; //Estremo inferiore dell'asse reale su cui calcolare il frattale
 	double max_real; //Estremo superiore dell'asse reale su cui calcolare il frattale
 	double min_im; //Estremo inferiore dell'asse immaginario su cui calcolare il frattale
 	double max_im; //Estremo superiore dell'asse immaginario su cui calcolare il frattale
+	double cx; //Parte reale della costante C nella successione da analizzare, necessario solo per l'insieme di Julia
+	double cy; ////Parte immaginaria della costante C nella successione da analizzare, necessario solo per l'insieme di Julia
+	bool isJulia; //Se true verrà visualizzato l'insieme di Julia associato alle variabili della struttura, altrimenti verrà visualizzato l'insieme di Mandelbrot
 }Thread;
 
 bool alive; //False quando si chiude l'applicazione, il thread termina in caso di false
 
-int mandelbrot(void *); //Thread che genera il frattale
+int fractal(void *); //Thread che genera il frattale
 void putpixel(SDL_Surface *, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t); //Funzione che mette un singolo pixel a schermo
 void drawrectangle(SDL_Surface *, uint16_t, uint16_t, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t); //Disegna un rettangolo
 void putstring(SDL_Surface *, TTF_Font *, const char *, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t); //Scrive qualcosa con le SDL_ttf
@@ -43,9 +46,12 @@ int main(int argc, char ** argv)
 	//Parametri di default
 	t.iterations = 256;
 	t.min_real = -2.0;
-	t.max_real = 0.8;
-	t.min_im = -1.4;
-	t.max_im = 1.4;
+	t.max_real = 2.0;
+	t.min_im = -2.0;
+	t.max_im = 2.0;
+	t.cx = 0;
+	t.cy = 1;
+	t.isJulia = false;
 
 	for(int i = 0; i < argc; i++)
 		if(!(string(argv[i]).compare("--help")))
@@ -58,10 +64,14 @@ int main(int argc, char ** argv)
 			cout << "\t-x\t\tset the minimum real number" << endl;
 			cout << "\t-Y\t\tset the maximum imaginary number" << endl;
 			cout << "\t-y\t\tset the minimum imaginary number" << endl;
+			cout << "\t-J\t\tshows the Julia set" << endl;
+			cout << "\t-c\t\tset the real part of the c constant(Julia set)" << endl;
+			cout << "\t-C\t\tset the imaginary part of the c constant(Julia set)" << endl;
+
 			return 0;
 		}
 
-	while ((c = getopt (argc, argv, "r:i:X:x:Y:y:")) != -1)
+	while ((c = getopt (argc, argv, "r:i:X:x:Y:y:Jc:C:")) != -1)
         {       
                 switch(c)
                 {       
@@ -88,6 +98,15 @@ int main(int argc, char ** argv)
 			case 'y':
 				t.min_im = atof(optarg);
 				break;
+			case 'J':
+				t.isJulia = true;
+				break;
+			case 'c':
+				t.cx = atof(optarg);
+				break;
+			case 'C':
+				t.cy = atof(optarg);
+				break;
                         case '?':
 				return -1;
                                 break;
@@ -111,7 +130,7 @@ int main(int argc, char ** argv)
 
 	alive = true;
 	t.screen = screen;
-	thr = SDL_CreateThread(mandelbrot, static_cast<void *>(&t));
+	thr = SDL_CreateThread(fractal, static_cast<void *>(&t));
 
 	while(!pressed)
 	{
@@ -135,7 +154,7 @@ int main(int argc, char ** argv)
 	return 0;
 }
 
-int mandelbrot(void * s)
+int fractal(void * s)
 {
 	Thread * t = static_cast<Thread *>(s);
 	TTF_Font* font;
@@ -169,13 +188,17 @@ int mandelbrot(void * s)
 			X = (static_cast<double>(x * abs(t->min_real - t->max_real)) / static_cast<double>(t->screen->w)) + (t->min_real);
 			Y = abs(t->min_im - t->max_im) - (static_cast<double>(y * abs(t->min_im - t->max_im)) / static_cast<double>(t->screen->h)) + (t->min_im);
 			complex<double> z;
-			complex<double> c = complex<double>(X, Y);
+			complex<double> c;
 			int count = 1;
-			
-			//Successione di Mandelbrot z(n + 1) = z(n)² + c
-			//Se il modulo del numero complesso z(n + 1) non diverge, ovvero rimane minore di 2, z(n + 1) appartiene all'insieme
-			//Count rappresenta il numero di iterazioni dopo il quale la successione diverge
-			z = c;
+
+			if(t->isJulia == true)
+			{
+				c = complex<double>(t->cx, t->cy);
+				z = complex<double>(X, Y);
+			}
+			else
+				z = c = complex<double>(X, Y);
+
 			while((abs(z) <= 2) && (count < t->iterations))
 			{
 				z = (z*z) + c;
