@@ -11,35 +11,37 @@
 
 using namespace std;
 
+//Struttura da passare al thread con i dati necessari
 typedef struct Thread
 {
 	SDL_Surface * screen;
-	double iterations;
-	double min_real;
-	double max_real;
-	double min_im;
-	double max_im;
+	double iterations; //Numero massimo di iterazioni da compiere per determinare l'appartenenza della successione all'insieme di Mandelbrot
+	double min_real; //Estremo inferiore dell'asse reale su cui calcolare il frattale
+	double max_real; //Estremo superiore dell'asse reale su cui calcolare il frattale
+	double min_im; //Estremo inferiore dell'asse immaginario su cui calcolare il frattale
+	double max_im; //Estremo superiore dell'asse immaginario su cui calcolare il frattale
 }Thread;
 
-bool alive;
+bool alive; //False quando si chiude l'applicazione, il thread termina in caso di false
 
-int mandelbrot(void *);
-void putpixel(SDL_Surface *, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t);
-void drawrectangle(SDL_Surface *, uint16_t, uint16_t, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t);
-void putstring(SDL_Surface *, TTF_Font *, const char *, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t);
+int mandelbrot(void *); //Thread che genera il frattale
+void putpixel(SDL_Surface *, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t); //Funzione che mette un singolo pixel a schermo
+void drawrectangle(SDL_Surface *, uint16_t, uint16_t, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t); //Disegna un rettangolo
+void putstring(SDL_Surface *, TTF_Font *, const char *, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t); //Scrive qualcosa con le SDL_ttf
 
 int main(int argc, char ** argv)
 {
 	SDL_Surface * screen = NULL;
 	SDL_Thread * thr = NULL;
-	SDL_Event e;
+	SDL_Event e; //Gestore eventi
 	int pressed = 0;
 	int c;
 	Thread t;
 	int xres = 800, yres = 600;
 	string res;
 
-	t.iterations = 128;
+	//Parametri di default
+	t.iterations = 256;
 	t.min_real = -2.0;
 	t.max_real = 0.8;
 	t.min_im = -1.4;
@@ -68,7 +70,7 @@ int main(int argc, char ** argv)
                                 break;
                         case 'r':
 				size_t index;
-
+				//Split della stringa relativa alla risoluzione in modo da ottenere la larghezza e l'altezza
                                 res = optarg;
 				index = res.find('x');
 				xres = atoi(res.substr(0, index).c_str());
@@ -119,7 +121,7 @@ int main(int argc, char ** argv)
 			{
 				case SDL_QUIT:
 					pressed = 1;
-					alive = false;
+					alive = false; //Comunica al thread la chiusura dell'applicazione
 					break;
 
 			}
@@ -140,6 +142,7 @@ int mandelbrot(void * s)
 	double X, Y;
 	stringstream ss;
 
+	//Max 4 numeri da introdurre da un double
 	ss.setf(ios::fixed,ios::floatfield);
 	ss.precision(4);
 
@@ -151,9 +154,10 @@ int mandelbrot(void * s)
 		return -1;
 	}
 
-	SDL_FillRect(t->screen, NULL, SDL_MapRGB(t->screen->format, 0xFF, 0xFF, 0xFF));
+	SDL_FillRect(t->screen, NULL, SDL_MapRGB(t->screen->format, 0xFF, 0xFF, 0xFF)); //Coloro lo schermo di bianco
 	SDL_Flip(t->screen);
 
+	//(t->screen->w / 30) rappresenta il margine da lasciare a sinistra e a destra per la metrica, idem per (t->screen->h / 30)[in alto e in basso]
 	for(uint16_t x = (t->screen->w / 30); x < (t->screen->w - (t->screen->w / 30)); x++)
 	{
 		for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
@@ -161,12 +165,16 @@ int mandelbrot(void * s)
 			if(alive == false)
 				return -1;
 
+			//X e Y sono le coordinate reali e immaginarie calcolate in modo da essere proporzionali alla dimensione dello schermo
 			X = (static_cast<double>(x * abs(t->min_real - t->max_real)) / static_cast<double>(t->screen->w)) + (t->min_real);
 			Y = abs(t->min_im - t->max_im) - (static_cast<double>(y * abs(t->min_im - t->max_im)) / static_cast<double>(t->screen->h)) + (t->min_im);
 			complex<double> z;
 			complex<double> c = complex<double>(X, Y);
 			int count = 1;
 			
+			//Successione di Mandelbrot z(n + 1) = z(n)² + c
+			//Se il modulo del numero complesso z(n + 1) non diverge, ovvero rimane minore di 2, z(n + 1) appartiene all'insieme
+			//Count rappresenta il numero di iterazioni dopo il quale la successione diverge
 			z = c;
 			while((abs(z) <= 2) && (count < t->iterations))
 			{
@@ -174,19 +182,22 @@ int mandelbrot(void * s)
 				++count;
 			}
 
-			//putpixel(t->screen, x, y, t->iterations - count, t->iterations - (2*count), t->iterations - (2*count));
+			//Colori basati su count
 			putpixel(t->screen, x, y, count, count, 2*count);
 		}
 
+		//Fa in modo che ogni (t->screen->w / 80) lo schermo venga aggiornato
 		if(!(x % (t->screen->w / 80)))
 			SDL_Flip(t->screen);
 	}
 
+	//Disegna il rettangolo per la metrica
 	drawrectangle(t->screen, t->screen->w/2, t->screen->h/2, t->screen->w - (2*(t->screen->w/30)), t->screen->h - (2*(t->screen->h/30)), 0x00, 0x00, 0x00);
 
 	TTF_CloseFont(font);
-	font = TTF_OpenFont(FONT, FONT_SIZE / 1.4);
+	font = TTF_OpenFont(FONT, FONT_SIZE / 1.4); //Font ridotto per comodità
 
+	//Questo ciclo disegna le linee di misurazione in alto e in basso
 	for(uint16_t x = (t->screen->w / 30); x < (t->screen->w - (t->screen->w / 30)); x++)
 		if(!(x % (t->screen->w / 10)))
 		{
@@ -196,6 +207,7 @@ int mandelbrot(void * s)
 			drawrectangle(t->screen, x, t->screen->h - (t->screen->h/30), 1, 5, 0x00, 0x00, 0x00);
 		}
 
+	//Questo ciclo disegna le linee di misurazione a sinistra e a destra
 	for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
 		if(!(y % (t->screen->h / 10)))
 		{
@@ -205,6 +217,7 @@ int mandelbrot(void * s)
 			drawrectangle(t->screen, t->screen->w - (t->screen->w/30), y, 5, 1, 0x00, 0x00, 0x00);
 		}
 
+	//A fianco alle linee di misurazione disegnate in precedenza viene posto il valore della X
 	for(uint16_t x = (t->screen->w / 30); x < (t->screen->w - (t->screen->w / 30)); x++)
 	{
 		X = (static_cast<double>(x * abs(t->min_real - t->max_real)) / static_cast<double>(t->screen->w)) + (t->min_real);
@@ -217,6 +230,7 @@ int mandelbrot(void * s)
 		}
 	}
 
+	//A fianco alle linee di misurazione disegnate in precedenza viene posto il valore della Y
 	for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
 	{
 		Y = abs(t->min_im - t->max_im) - (static_cast<double>(y * abs(t->min_im - t->max_im)) / static_cast<double>(t->screen->h)) + (t->min_im);
