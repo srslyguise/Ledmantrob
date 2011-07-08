@@ -174,9 +174,8 @@ int mandelbrot(void * s)
 				++count;
 			}
 
-			//putpixel(t->screen, x, y, 0xFF / count, 0xFF / count, 0xFF / count);
-			putpixel(t->screen, x, y, t->iterations - (2*count), t->iterations - (2*count), t->iterations - count);
-			//putpixel(t->screen, x, y, 0x00, 0x00, t->iterations - count);
+			//putpixel(t->screen, x, y, t->iterations - count, t->iterations - (2*count), t->iterations - (2*count));
+			putpixel(t->screen, x, y, count, count, 2*count);
 		}
 
 		if(!(x % (t->screen->w / 80)))
