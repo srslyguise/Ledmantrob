@@ -27,8 +27,9 @@ typedef struct Fractal_s
 	double gy; //Imaginary part of the green C constant in the succession to be analyzed, needed only for the Julia set
 	double bx; //Real part of the blue C constant in the succession to be analyzed, needed only for the Julia set
 	double by; //Imaginary part of the blue C constant in the succession to be analyzed, needed only for the Julia set
-	double exp;
+	double exp; //Exponent of the Z in the succession
 	bool isJulia; //If true, associated Julia set will be shown, instead if false, will be shown the associated Mandelbrot set
+	bool metric;
 }Fractal_s;
 
 bool alive; //When false the fractal thread and the application will close
@@ -65,6 +66,7 @@ int main(int argc, char ** argv)
 	t.by = 0.06;
 	t.exp = 2;
 	t.isJulia = false;
+	t.metric = false;
 
 	for(int i = 0; i < argc; i++)
 		if(!(string(argv[i]).compare("--help")))
@@ -79,6 +81,7 @@ int main(int argc, char ** argv)
 			cout << "\t-Y\t\tset the maximum imaginary number" << endl;
 			cout << "\t-y\t\tset the minimum imaginary number" << endl;
 			cout << "\t-J\t\tshows the Julia set" << endl;
+			cout << "\t-M\t\tshows metrics" << endl;
 			cout << "\t-r\t\tset the real part of the red c constant(Julia set)" << endl;
 			cout << "\t-R\t\tset the imaginary part of the red c constant(Julia set)" << endl;
 			cout << "\t-g\t\tset the real part of the green c constant(Julia set)" << endl;
@@ -90,7 +93,7 @@ int main(int argc, char ** argv)
 			return 0;
 		}
 
-	while ((c = getopt (argc, argv, "v:Fi:X:x:Y:y:Jr:R:g:G:b:B:e:")) != -1)
+	while ((c = getopt (argc, argv, "v:Fi:X:x:Y:y:JMr:R:g:G:b:B:e:")) != -1)
         {       
                 switch(c)
                 {       
@@ -122,6 +125,9 @@ int main(int argc, char ** argv)
 				break;
 			case 'J':
 				t.isJulia = true;
+				break;
+			case 'M':
+				t.metric = true;
 				break;
 			case 'r':
 				t.rx = atof(optarg);
@@ -196,6 +202,12 @@ int main(int argc, char ** argv)
 							SDL_WM_ToggleFullScreen(screen);
 							break;
 						}
+
+						case SDLK_w:
+						{
+							SDL_SaveBMP(screen, "file.bmp");
+							break;
+						}
 					}
 					break;
 				case SDL_QUIT:
@@ -257,6 +269,7 @@ int fractal(void * s)
 	Fractal_s * t = static_cast<Fractal_s *>(s);
 	TTF_Font* font;
 	double X, Y;
+	double marginx = (t->screen->w / 30), marginy = (t->screen->h / 30);
 	stringstream ss;
 
 	//Max 4 numbers to be used in a double
@@ -264,6 +277,9 @@ int fractal(void * s)
 	ss.precision(4);
 
 	TTF_Init();
+
+	if(t->metric == false)
+		marginx = marginy = 0;
 
 	if((font = TTF_OpenFont(FONT, FONT_SIZE)) == NULL)
 	{
@@ -275,9 +291,9 @@ int fractal(void * s)
 	SDL_Flip(t->screen);
 
 	//(t->screen->w / 30) represents the margin, on left and on right to be shown for the "metric"
-	for(uint16_t x = (t->screen->w / 30); x < (t->screen->w - (t->screen->w / 30)); x++)
+	for(uint16_t x = marginx; x < (t->screen->w - marginx); x++)
 	{
-		for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
+		for(uint16_t y = marginy; y < (t->screen->h - marginy); y++)
 		{
 			if(alive == false)
 				return -1;
@@ -351,48 +367,51 @@ int fractal(void * s)
 			SDL_Flip(t->screen);
 	}
 
-	//Draws the outer rectangle
-	drawrectangle(t->screen, t->screen->w/2, t->screen->h/2, t->screen->w - (2*(t->screen->w/30)), t->screen->h - (2*(t->screen->h/30)), 0x00, 0x00, 0x00);
-
-	TTF_CloseFont(font);
-	font = TTF_OpenFont(FONT, FONT_SIZE / 1.4); //Font is reopen to be more accurate
-
-	//These cicles draws lines around the outer rectangle
-	for(uint16_t x = (t->screen->w / 30); x < (t->screen->w - (t->screen->w / 30)); x++)
-		if(!(x % (t->screen->w / 10)))
-		{
-			drawrectangle(t->screen, x, (t->screen->h/30), 1, 5, 0x00, 0x00, 0x00);
-			drawrectangle(t->screen, x, t->screen->h - (t->screen->h/30), 1, 5, 0x00, 0x00, 0x00);
-		}
-
-	for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
-		if(!(y % (t->screen->h / 10)))
-		{
-			drawrectangle(t->screen, (t->screen->w/30), y, 5, 1, 0x00, 0x00, 0x00);
-			drawrectangle(t->screen, t->screen->w - (t->screen->w/30), y, 5, 1, 0x00, 0x00, 0x00);
-		}
-
-	for(uint16_t x = (t->screen->w / 30); x < (t->screen->w - (t->screen->w / 30)); x++)
+	if(t->metric == true)
 	{
-		X = (static_cast<double>(x * abs(t->min_real - t->max_real)) / static_cast<double>(t->screen->w)) + (t->min_real);
+		//Draws the outer rectangle
+		drawrectangle(t->screen, t->screen->w/2, t->screen->h/2, t->screen->w - (2*marginx), t->screen->h - (2*marginy), 0x00, 0x00, 0x00);
 
-		if(!(x % (t->screen->w / 10)))
+		TTF_CloseFont(font);
+		font = TTF_OpenFont(FONT, FONT_SIZE / 1.4); //Font is reopen to be more accurate
+
+		//These cicles draws lines around the outer rectangle
+		for(uint16_t x = marginx; x < (t->screen->w - marginx); x++)
+			if(!(x % (t->screen->w / 10)))
+			{
+				drawrectangle(t->screen, x, marginy, 1, 5, 0x00, 0x00, 0x00);
+				drawrectangle(t->screen, x, t->screen->h - marginy, 1, 5, 0x00, 0x00, 0x00);
+			}
+
+		for(uint16_t y = marginx; y < (t->screen->h - marginy); y++)
+			if(!(y % (t->screen->h / 10)))
+			{
+				drawrectangle(t->screen, marginx, y, 5, 1, 0x00, 0x00, 0x00);
+				drawrectangle(t->screen, t->screen->w - marginx, y, 5, 1, 0x00, 0x00, 0x00);
+			}
+
+		for(uint16_t x = marginx; x < (t->screen->w - marginx); x++)
 		{
-			ss << X;
-			putstring(t->screen, font, ss.str().c_str(), x, t->screen->h - (FONT_SIZE/2), 0x00, 0x00, 0x00);
-			ss.str("");
+			X = (static_cast<double>(x * abs(t->min_real - t->max_real)) / static_cast<double>(t->screen->w)) + (t->min_real);
+
+			if(!(x % (t->screen->w / 10)))
+			{
+				ss << X;
+				putstring(t->screen, font, ss.str().c_str(), x, t->screen->h - (FONT_SIZE/2), 0x00, 0x00, 0x00);
+				ss.str("");
+			}
 		}
-	}
 
-	for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
-	{
-		Y = abs(t->min_im - t->max_im) - (static_cast<double>(y * abs(t->min_im - t->max_im)) / static_cast<double>(t->screen->h)) + (t->min_im);
-
-		if(!(y % (t->screen->h / 10)))
+		for(uint16_t y = marginy; y < (t->screen->h - marginy); y++)
 		{
-			ss << Y;
-			putstring(t->screen, font, ss.str().c_str(), (t->screen->w/30)/2, y, 0x00, 0x00, 0x00);
-			ss.str("");
+			Y = abs(t->min_im - t->max_im) - (static_cast<double>(y * abs(t->min_im - t->max_im)) / static_cast<double>(t->screen->h)) + (t->min_im);
+
+			if(!(y % (t->screen->h / 10)))
+			{
+				ss << Y;
+				putstring(t->screen, font, ss.str().c_str(), marginx/2, y, 0x00, 0x00, 0x00);
+				ss.str("");
+			}
 		}
 	}
 

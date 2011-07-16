@@ -1,0 +1,1 @@
+_Ledmantrob_ is a program that shows the _Mandelbrot_ or the _Julia_ sets
