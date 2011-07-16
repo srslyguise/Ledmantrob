@@ -11,39 +11,41 @@
 
 using namespace std;
 
-//Struttura da passare al thread con i dati necessari
-typedef struct Thread
+//This struct contains all the data needed by the fractal thread
+typedef struct Fractal_s
 {
 	SDL_Surface * screen;
-	double iterations; //Numero massimo di iterazioni da compiere per determinare l'appartenenza della successione all'insieme di Mandelbrot|Julia
-	double min_real; //Estremo inferiore dell'asse reale su cui calcolare il frattale
-	double max_real; //Estremo superiore dell'asse reale su cui calcolare il frattale
-	double min_im; //Estremo inferiore dell'asse immaginario su cui calcolare il frattale
-	double max_im; //Estremo superiore dell'asse immaginario su cui calcolare il frattale
-	double cx; //Parte reale della costante C nella successione da analizzare, necessario solo per l'insieme di Julia
-	double cy; ////Parte immaginaria della costante C nella successione da analizzare, necessario solo per l'insieme di Julia
-	bool isJulia; //Se true verrà visualizzato l'insieme di Julia associato alle variabili della struttura, altrimenti verrà visualizzato l'insieme di Mandelbrot
-}Thread;
+	uint8_t * status; //When is 0, the thread is dead, when is 1 is running
+	double iterations; //Maximum number of iterations to do to determine if the number considered is part of the Mandelbrot|Julia set, the higher is the number, higher will be the precision
+	double min_real; //Lower bound of the real axis with which calculate the fractal
+	double max_real; //Upper bound of the real axis with which calculate the fractal
+	double min_im; //Lower bound of the imaginary axis with which calculate the fractal
+	double max_im; //Upper bound of the imaginary axis with which calculate the fractal
+	double cx; //Real part of the C constant in the succession to be analyzed, needed only for the Julia set
+	double cy; //Imaginary part of the C constant in the succession to be analyzed, needed only for the Julia set
+	bool isJulia; //If true, associated Julia set will be shown, instead if false, will be shown the associated Mandelbrot set
+}Fractal_s;
 
-bool alive; //False quando si chiude l'applicazione, il thread termina in caso di false
+bool alive; //When false the fractal thread and the application will close
 
-int fractal(void *); //Thread che genera il frattale
-void putpixel(SDL_Surface *, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t); //Funzione che mette un singolo pixel a schermo
-void drawrectangle(SDL_Surface *, uint16_t, uint16_t, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t); //Disegna un rettangolo
-void putstring(SDL_Surface *, TTF_Font *, const char *, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t); //Scrive qualcosa con le SDL_ttf
+int fractal(void *); //Thread which shows the fractal
+void putpixel(SDL_Surface *, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t); //Put a single pixel on screen
+void drawrectangle(SDL_Surface *, uint16_t, uint16_t, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t); //Draws a rectangle
+void putstring(SDL_Surface *, TTF_Font *, const char *, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t); //Write something with SDL_ttf
 
 int main(int argc, char ** argv)
 {
 	SDL_Surface * screen = NULL;
 	SDL_Thread * thr = NULL;
-	SDL_Event e; //Gestore eventi
+	SDL_Event e;
+	uint8_t status = 0;
 	int pressed = 0;
 	int c;
-	Thread t;
+	Fractal_s t;
 	int xres = 800, yres = 600;
 	string res;
 
-	//Parametri di default
+	//Default parameters
 	t.iterations = 256;
 	t.min_real = -2.0;
 	t.max_real = 2.0;
@@ -80,7 +82,7 @@ int main(int argc, char ** argv)
                                 break;
                         case 'r':
 				size_t index;
-				//Split della stringa relativa alla risoluzione in modo da ottenere la larghezza e l'altezza
+				//This part of code splits the string given as argument to obtain the x and the y resolution
                                 res = optarg;
 				index = res.find('x');
 				xres = atoi(res.substr(0, index).c_str());
@@ -130,6 +132,8 @@ int main(int argc, char ** argv)
 
 	alive = true;
 	t.screen = screen;
+	status = 1;
+	t.status = &status;
 	thr = SDL_CreateThread(fractal, static_cast<void *>(&t));
 
 	while(!pressed)
@@ -140,7 +144,45 @@ int main(int argc, char ** argv)
 			{
 				case SDL_QUIT:
 					pressed = 1;
-					alive = false; //Comunica al thread la chiusura dell'applicazione
+					alive = false;
+					break;
+
+				case SDL_MOUSEBUTTONDOWN:
+					if(*(t.status) == 0)
+					{
+						switch(e.button.button)
+						{
+							case SDL_BUTTON_LEFT:
+								//In this part of code, all the parameters are recalculated in function of the position of the mouse at the click, pratically, the minimum and the maximum are calculated to be proportional to the screen resolution and the mouse position
+								t.min_real = (static_cast<double>(static_cast<int>(e.button.x) * abs(t.min_real - t.max_real)) / static_cast<double>(screen->w)) + (t.min_real) - (abs(t.min_real - t.max_real) / 2);
+								t.max_real = (static_cast<double>(static_cast<int>(e.button.x) * abs(t.min_real - t.max_real)) / static_cast<double>(screen->w)) + (t.min_real) + (abs(t.min_real - t.max_real) / 2);
+								t.min_im = abs(t.min_im - t.max_im) - (static_cast<double>(static_cast<int>(e.button.y) * abs(t.min_im - t.max_im)) / static_cast<double>(screen->h)) + (t.min_im) - (abs(t.min_im - t.max_im) / 2);
+								t.max_im = abs(t.min_im - t.max_im) - (static_cast<double>(static_cast<int>(e.button.y) * abs(t.min_im - t.max_im)) / static_cast<double>(screen->h)) + (t.min_im) + (abs(t.min_im - t.max_im) / 2);
+
+								*(t.status) = 1;
+								thr = SDL_CreateThread(fractal, static_cast<void *>(&t));
+								break;
+							case SDL_BUTTON_WHEELUP:
+								t.min_real = (static_cast<double>(static_cast<int>(e.button.x) * abs(t.min_real - t.max_real)) / static_cast<double>(screen->w)) + (t.min_real) - (abs(t.min_real - t.max_real) / 4);
+								t.max_real = (static_cast<double>(static_cast<int>(e.button.x) * abs(t.min_real - t.max_real)) / static_cast<double>(screen->w)) + (t.min_real) + (abs(t.min_real - t.max_real) / 4);
+								t.min_im = abs(t.min_im - t.max_im) - (static_cast<double>(static_cast<int>(e.button.y) * abs(t.min_im - t.max_im)) / static_cast<double>(screen->h)) + (t.min_im) - (abs(t.min_im - t.max_im) / 4);
+								t.max_im = abs(t.min_im - t.max_im) - (static_cast<double>(static_cast<int>(e.button.y) * abs(t.min_im - t.max_im)) / static_cast<double>(screen->h)) + (t.min_im) + (abs(t.min_im - t.max_im) / 4);
+
+								*(t.status) = 1;
+								thr = SDL_CreateThread(fractal, static_cast<void *>(&t));
+								break;
+
+							case SDL_BUTTON_WHEELDOWN:
+								t.min_real = (static_cast<double>(static_cast<int>(e.button.x) * abs(t.min_real - t.max_real)) / static_cast<double>(screen->w)) + (t.min_real) - abs(t.min_real - t.max_real);
+								t.max_real = (static_cast<double>(static_cast<int>(e.button.x) * abs(t.min_real - t.max_real)) / static_cast<double>(screen->w)) + (t.min_real) + abs(t.min_real - t.max_real);
+								t.min_im = abs(t.min_im - t.max_im) - (static_cast<double>(static_cast<int>(e.button.y) * abs(t.min_im - t.max_im)) / static_cast<double>(screen->h)) + (t.min_im) - abs(t.min_im - t.max_im);
+								t.max_im = abs(t.min_im - t.max_im) - (static_cast<double>(static_cast<int>(e.button.y) * abs(t.min_im - t.max_im)) / static_cast<double>(screen->h)) + (t.min_im) + abs(t.min_im - t.max_im);
+
+								*(t.status) = 1;
+								thr = SDL_CreateThread(fractal, static_cast<void *>(&t));
+								break;
+						}
+					}
 					break;
 
 			}
@@ -156,12 +198,12 @@ int main(int argc, char ** argv)
 
 int fractal(void * s)
 {
-	Thread * t = static_cast<Thread *>(s);
+	Fractal_s * t = static_cast<Fractal_s *>(s);
 	TTF_Font* font;
 	double X, Y;
 	stringstream ss;
 
-	//Max 4 numeri da introdurre da un double
+	//Max 4 numbers to be used in a double
 	ss.setf(ios::fixed,ios::floatfield);
 	ss.precision(4);
 
@@ -173,10 +215,10 @@ int fractal(void * s)
 		return -1;
 	}
 
-	SDL_FillRect(t->screen, NULL, SDL_MapRGB(t->screen->format, 0xFF, 0xFF, 0xFF)); //Coloro lo schermo di bianco
+	SDL_FillRect(t->screen, NULL, SDL_MapRGB(t->screen->format, 0xFF, 0xFF, 0xFF)); //White background
 	SDL_Flip(t->screen);
 
-	//(t->screen->w / 30) rappresenta il margine da lasciare a sinistra e a destra per la metrica, idem per (t->screen->h / 30)[in alto e in basso]
+	//(t->screen->w / 30) represents the margin, on left and on right to be shown for the "metric"
 	for(uint16_t x = (t->screen->w / 30); x < (t->screen->w - (t->screen->w / 30)); x++)
 	{
 		for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
@@ -184,7 +226,7 @@ int fractal(void * s)
 			if(alive == false)
 				return -1;
 
-			//X e Y sono le coordinate reali e immaginarie calcolate in modo da essere proporzionali alla dimensione dello schermo
+			//X and Y are the real and the imaginary coords calculated proportionally to the screen coords
 			X = (static_cast<double>(x * abs(t->min_real - t->max_real)) / static_cast<double>(t->screen->w)) + (t->min_real);
 			Y = abs(t->min_im - t->max_im) - (static_cast<double>(y * abs(t->min_im - t->max_im)) / static_cast<double>(t->screen->h)) + (t->min_im);
 			complex<double> z;
@@ -205,42 +247,36 @@ int fractal(void * s)
 				++count;
 			}
 
-			//Colori basati su count
+			//Colors are based on the number of iterations
 			putpixel(t->screen, x, y, count, count, 2*count);
 		}
 
-		//Fa in modo che ogni (t->screen->w / 80) lo schermo venga aggiornato
+		//Every (t->screen->w / 80) the screen is updated
 		if(!(x % (t->screen->w / 80)))
 			SDL_Flip(t->screen);
 	}
 
-	//Disegna il rettangolo per la metrica
+	//Draws the outer rectangle
 	drawrectangle(t->screen, t->screen->w/2, t->screen->h/2, t->screen->w - (2*(t->screen->w/30)), t->screen->h - (2*(t->screen->h/30)), 0x00, 0x00, 0x00);
 
 	TTF_CloseFont(font);
-	font = TTF_OpenFont(FONT, FONT_SIZE / 1.4); //Font ridotto per comodità
+	font = TTF_OpenFont(FONT, FONT_SIZE / 1.4); //Font is reopen to be more accurate
 
-	//Questo ciclo disegna le linee di misurazione in alto e in basso
+	//These cicles draws lines around the outer rectangle
 	for(uint16_t x = (t->screen->w / 30); x < (t->screen->w - (t->screen->w / 30)); x++)
 		if(!(x % (t->screen->w / 10)))
 		{
-			//drawrectangle(t->screen, x - (t->screen->w/40), (t->screen->h/40), 1, 5, 0x00, 0x00, 0x00);
-			//drawrectangle(t->screen, x - (t->screen->w/40), t->screen->h - (t->screen->h/40), 1, 5, 0x00, 0x00, 0x00);
 			drawrectangle(t->screen, x, (t->screen->h/30), 1, 5, 0x00, 0x00, 0x00);
 			drawrectangle(t->screen, x, t->screen->h - (t->screen->h/30), 1, 5, 0x00, 0x00, 0x00);
 		}
 
-	//Questo ciclo disegna le linee di misurazione a sinistra e a destra
 	for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
 		if(!(y % (t->screen->h / 10)))
 		{
-			//drawrectangle(t->screen, (t->screen->w/40), y - (t->screen->h/40), 5, 1, 0x00, 0x00, 0x00);
-			//drawrectangle(t->screen, t->screen->w - (t->screen->w/40), y - (t->screen->h/40), 5, 1, 0x00, 0x00, 0x00);
 			drawrectangle(t->screen, (t->screen->w/30), y, 5, 1, 0x00, 0x00, 0x00);
 			drawrectangle(t->screen, t->screen->w - (t->screen->w/30), y, 5, 1, 0x00, 0x00, 0x00);
 		}
 
-	//A fianco alle linee di misurazione disegnate in precedenza viene posto il valore della X
 	for(uint16_t x = (t->screen->w / 30); x < (t->screen->w - (t->screen->w / 30)); x++)
 	{
 		X = (static_cast<double>(x * abs(t->min_real - t->max_real)) / static_cast<double>(t->screen->w)) + (t->min_real);
@@ -253,7 +289,6 @@ int fractal(void * s)
 		}
 	}
 
-	//A fianco alle linee di misurazione disegnate in precedenza viene posto il valore della Y
 	for(uint16_t y = (t->screen->h / 30); y < (t->screen->h - (t->screen->h / 30)); y++)
 	{
 		Y = abs(t->min_im - t->max_im) - (static_cast<double>(y * abs(t->min_im - t->max_im)) / static_cast<double>(t->screen->h)) + (t->min_im);
@@ -269,6 +304,7 @@ int fractal(void * s)
 	TTF_CloseFont(font);
 	TTF_Quit();
 	SDL_Flip(t->screen);
+	*(t->status) = 0;
 }
 
 void putpixel(SDL_Surface * screen, uint16_t x, uint16_t y, uint8_t R, uint8_t G, uint8_t B)
