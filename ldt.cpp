@@ -205,7 +205,19 @@ int main(int argc, char ** argv)
 
 						case SDLK_w:
 						{
-							SDL_SaveBMP(screen, "file.bmp");
+							if(*(t.status) == 0)
+								SDL_SaveBMP(screen, "file.bmp");
+							break;
+						}
+
+						case SDLK_m:
+						{
+							if(*(t.status) == 0)
+							{
+								t.metric = (t.metric == true) ? false : true;
+								*(t.status) = 1;
+								thr = SDL_CreateThread(fractal, static_cast<void *>(&t));
+							}
 							break;
 						}
 					}
