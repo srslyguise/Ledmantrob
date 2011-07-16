@@ -21,8 +21,13 @@ typedef struct Fractal_s
 	double max_real; //Upper bound of the real axis with which calculate the fractal
 	double min_im; //Lower bound of the imaginary axis with which calculate the fractal
 	double max_im; //Upper bound of the imaginary axis with which calculate the fractal
-	double cx; //Real part of the C constant in the succession to be analyzed, needed only for the Julia set
-	double cy; //Imaginary part of the C constant in the succession to be analyzed, needed only for the Julia set
+	double rx; //Real part of the red C constant in the succession to be analyzed, needed only for the Julia set
+	double ry; //Imaginary part of the red C constant in the succession to be analyzed, needed only for the Julia set
+	double gx; //Real part of the green C constant in the succession to be analyzed, needed only for the Julia set
+	double gy; //Imaginary part of the green C constant in the succession to be analyzed, needed only for the Julia set
+	double bx; //Real part of the blue C constant in the succession to be analyzed, needed only for the Julia set
+	double by; //Imaginary part of the blue C constant in the succession to be analyzed, needed only for the Julia set
+	double exp;
 	bool isJulia; //If true, associated Julia set will be shown, instead if false, will be shown the associated Mandelbrot set
 }Fractal_s;
 
@@ -40,6 +45,7 @@ int main(int argc, char ** argv)
 	SDL_Event e;
 	uint8_t status = 0;
 	int pressed = 0;
+	bool fullscreen = false;
 	int c;
 	Fractal_s t;
 	int xres = 800, yres = 600;
@@ -51,8 +57,13 @@ int main(int argc, char ** argv)
 	t.max_real = 2.0;
 	t.min_im = -2.0;
 	t.max_im = 2.0;
-	t.cx = 0;
-	t.cy = 1;
+	t.rx = -0.52;
+	t.ry = 0.06;
+	t.gx = -0.51;
+	t.gy = 0.06;
+	t.bx = -0.50;
+	t.by = 0.06;
+	t.exp = 2;
 	t.isJulia = false;
 
 	for(int i = 0; i < argc; i++)
@@ -60,27 +71,33 @@ int main(int argc, char ** argv)
 		{
 			cout << "Usage: " << argv[0] << " [options] | --help" << endl;
 			cout << "Valid options are:" << endl;
-			cout << "\t-r\t\tset the resolution" << endl;
+			cout << "\t-v\t\tset the resolution" << endl;
+			cout << "\t-F\t\tstart fullscreen" << endl;
 			cout << "\t-i\t\tset the number of iterations" << endl;
 			cout << "\t-X\t\tset the maximum real number" << endl;
 			cout << "\t-x\t\tset the minimum real number" << endl;
 			cout << "\t-Y\t\tset the maximum imaginary number" << endl;
 			cout << "\t-y\t\tset the minimum imaginary number" << endl;
 			cout << "\t-J\t\tshows the Julia set" << endl;
-			cout << "\t-c\t\tset the real part of the c constant(Julia set)" << endl;
-			cout << "\t-C\t\tset the imaginary part of the c constant(Julia set)" << endl;
+			cout << "\t-r\t\tset the real part of the red c constant(Julia set)" << endl;
+			cout << "\t-R\t\tset the imaginary part of the red c constant(Julia set)" << endl;
+			cout << "\t-g\t\tset the real part of the green c constant(Julia set)" << endl;
+			cout << "\t-G\t\tset the imaginary part of the green c constant(Julia set)" << endl;
+			cout << "\t-b\t\tset the real part of the blue c constant(Julia set)" << endl;
+			cout << "\t-B\t\tset the imaginary part of the blue c constant(Julia set)" << endl;
+			cout << "\t-e\t\tset the exp of the z in the succession" << endl;
 
 			return 0;
 		}
 
-	while ((c = getopt (argc, argv, "r:i:X:x:Y:y:Jc:C:")) != -1)
+	while ((c = getopt (argc, argv, "v:Fi:X:x:Y:y:Jr:R:g:G:b:B:e:")) != -1)
         {       
                 switch(c)
                 {       
                         case 'i':
                                 t.iterations = atoi(optarg);
                                 break;
-                        case 'r':
+                        case 'v':
 				size_t index;
 				//This part of code splits the string given as argument to obtain the x and the y resolution
                                 res = optarg;
@@ -88,6 +105,9 @@ int main(int argc, char ** argv)
 				xres = atoi(res.substr(0, index).c_str());
 				yres = atoi(res.substr(index + 1).c_str());
                                 break;
+			case 'F':
+				fullscreen = true;
+				break;
 			case 'X':
 				t.max_real = atof(optarg);
 				break;
@@ -103,11 +123,26 @@ int main(int argc, char ** argv)
 			case 'J':
 				t.isJulia = true;
 				break;
-			case 'c':
-				t.cx = atof(optarg);
+			case 'r':
+				t.rx = atof(optarg);
 				break;
-			case 'C':
-				t.cy = atof(optarg);
+			case 'R':
+				t.ry = atof(optarg);
+				break;
+			case 'g':
+				t.gx = atof(optarg);
+				break;
+			case 'G':
+				t.gy = atof(optarg);
+				break;
+			case 'b':
+				t.bx = atof(optarg);
+				break;
+			case 'B':
+				t.by = atof(optarg);
+				break;
+			case 'e':
+				t.exp = atof(optarg);
 				break;
                         case '?':
 				return -1;
@@ -123,7 +158,11 @@ int main(int argc, char ** argv)
 
 	atexit(SDL_Quit);
 
-	screen = SDL_SetVideoMode(xres, yres, 32, SDL_HWSURFACE);
+	if(fullscreen == true)
+		screen = SDL_SetVideoMode(xres, yres, 32, SDL_FULLSCREEN | SDL_HWSURFACE);
+	else
+		screen = SDL_SetVideoMode(xres, yres, 32, SDL_HWSURFACE);
+
 	if(screen == NULL)
 	{
 		cout << "Impossibile settare il video: " << SDL_GetError() << endl;
@@ -142,6 +181,23 @@ int main(int argc, char ** argv)
 		{
 			switch(e.type)
 			{
+				case SDL_KEYDOWN:
+					switch(e.key.keysym.sym)
+					{
+						case SDLK_ESCAPE:
+						{
+							pressed = 1;
+							alive = false;
+							break;
+						}
+
+						case SDLK_f:
+						{
+							SDL_WM_ToggleFullScreen(screen);
+							break;
+						}
+					}
+					break;
 				case SDL_QUIT:
 					pressed = 1;
 					alive = false;
@@ -231,24 +287,63 @@ int fractal(void * s)
 			Y = abs(t->min_im - t->max_im) - (static_cast<double>(y * abs(t->min_im - t->max_im)) / static_cast<double>(t->screen->h)) + (t->min_im);
 			complex<double> z;
 			complex<double> c;
-			int count = 1;
+			int countR = 1;
+			int countG = 1;
+			int countB = 1;
 
 			if(t->isJulia == true)
 			{
-				c = complex<double>(t->cx, t->cy);
+				c = complex<double>(t->rx, t->ry);
 				z = complex<double>(X, Y);
+
+				while((abs(z) <= 2) && (countR < t->iterations))
+				{
+					z = pow(z, t->exp) + c;
+					++countR;
+				}
+
+				c = complex<double>(t->gx, t->gy);
+				z = complex<double>(X, Y);
+				while((abs(z) <= 2) && (countG < t->iterations))
+				{
+					z = pow(z, t->exp) + c;
+					++countG;
+				}
+
+				c = complex<double>(t->bx, t->by);
+				z = complex<double>(X, Y);
+				while((abs(z) <= 2) && (countB < t->iterations))
+				{
+					z = pow(z, t->exp) + c;
+					++countB;
+				}
 			}
 			else
-				z = c = complex<double>(X, Y);
-
-			while((abs(z) <= 2) && (count < t->iterations))
 			{
-				z = (z*z) + c;
-				++count;
+				z = c = complex<double>(X, Y);
+				while((abs(z) <= 2) && (countR < t->iterations))
+				{
+					z = pow(z, t->exp) + c;
+					++countR;
+				}
+
+				z = c = complex<double>(X, Y);
+				while((abs(z) <= 2) && (countG < t->iterations))
+				{
+					z = pow(z, t->exp) + c;
+					++countG;
+				}
+
+				z = c = complex<double>(X, Y);
+				while((abs(z) <= 2) && (countB < t->iterations))
+				{
+					z = pow(z, t->exp) + c;
+					++countB;
+				}
 			}
 
 			//Colors are based on the number of iterations
-			putpixel(t->screen, x, y, count, count, 2*count);
+			putpixel(t->screen, x, y, countR, countG, countB);
 		}
 
 		//Every (t->screen->w / 80) the screen is updated
