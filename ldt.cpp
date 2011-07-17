@@ -302,7 +302,6 @@ int fractal(void * s)
 	SDL_FillRect(t->screen, NULL, SDL_MapRGB(t->screen->format, 0xFF, 0xFF, 0xFF)); //White background
 	SDL_Flip(t->screen);
 
-	//(t->screen->w / 30) represents the margin, on left and on right to be shown for the "metric"
 	for(uint16_t x = marginx; x < (t->screen->w - marginx); x++)
 	{
 		for(uint16_t y = marginy; y < (t->screen->h - marginy); y++)
@@ -315,9 +314,9 @@ int fractal(void * s)
 			Y = abs(t->min_im - t->max_im) - (static_cast<double>(y * abs(t->min_im - t->max_im)) / static_cast<double>(t->screen->h)) + (t->min_im);
 			complex<double> z;
 			complex<double> c;
-			int countR = 1;
-			int countG = 1;
-			int countB = 1;
+			int countR = 0;
+			int countG = 0;
+			int countB = 0;
 
 			if(t->isJulia == true)
 			{
@@ -348,21 +347,24 @@ int fractal(void * s)
 			}
 			else
 			{
-				z = c = complex<double>(X, Y);
+				c = complex<double>(X, Y);
+				z = complex<double>(0, 0);
 				while((abs(z) <= 2) && (countR < t->iterations))
 				{
 					z = pow(z, t->exp) + c;
 					++countR;
 				}
 
-				z = c = complex<double>(X, Y);
+				c = complex<double>(X, Y);
+				z = complex<double>(0, 0);
 				while((abs(z) <= 2) && (countG < t->iterations))
 				{
 					z = pow(z, t->exp) + c;
 					++countG;
 				}
 
-				z = c = complex<double>(X, Y);
+				c = complex<double>(X, Y);
+				z = complex<double>(0, 0);
 				while((abs(z) <= 2) && (countB < t->iterations))
 				{
 					z = pow(z, t->exp) + c;
