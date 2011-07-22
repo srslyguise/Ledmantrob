@@ -11,6 +11,13 @@
 
 using namespace std;
 
+typedef enum type
+{
+	MANDELBROT = 0,
+	JULIA,
+	LAMBDA
+} type;
+
 //This struct contains all the data needed by the fractal thread
 typedef struct Fractal_s
 {
@@ -28,7 +35,7 @@ typedef struct Fractal_s
 	double bx; //Real part of the blue C constant in the succession to be analyzed, needed only for the Julia set
 	double by; //Imaginary part of the blue C constant in the succession to be analyzed, needed only for the Julia set
 	double exp; //Exponent of the Z in the succession
-	bool isJulia; //If true, associated Julia set will be shown, instead if false, will be shown the associated Mandelbrot set
+	type ty;
 	bool metric;
 }Fractal_s;
 
@@ -65,7 +72,7 @@ int main(int argc, char ** argv)
 	t.bx = -0.50;
 	t.by = 0.06;
 	t.exp = 2;
-	t.isJulia = false;
+	t.ty = MANDELBROT;
 	t.metric = false;
 
 	for(int i = 0; i < argc; i++)
@@ -80,8 +87,10 @@ int main(int argc, char ** argv)
 			cout << "\t-x\t\tset the minimum real number" << endl;
 			cout << "\t-Y\t\tset the maximum imaginary number" << endl;
 			cout << "\t-y\t\tset the minimum imaginary number" << endl;
+			cout << "\t-M\t\tshows the Mandelbrot set" << endl;
 			cout << "\t-J\t\tshows the Julia set" << endl;
-			cout << "\t-M\t\tshows metrics" << endl;
+			cout << "\t-L\t\tshows the Lambda set" << endl;
+			cout << "\t-m\t\tshows metrics" << endl;
 			cout << "\t-r\t\tset the real part of the red c constant(Julia set)" << endl;
 			cout << "\t-R\t\tset the imaginary part of the red c constant(Julia set)" << endl;
 			cout << "\t-g\t\tset the real part of the green c constant(Julia set)" << endl;
@@ -93,7 +102,7 @@ int main(int argc, char ** argv)
 			return 0;
 		}
 
-	while ((c = getopt (argc, argv, "v:Fi:X:x:Y:y:JMr:R:g:G:b:B:e:")) != -1)
+	while ((c = getopt (argc, argv, "v:Fi:X:x:Y:y:MJLmr:R:g:G:b:B:e:")) != -1)
         {       
                 switch(c)
                 {       
@@ -123,10 +132,16 @@ int main(int argc, char ** argv)
 			case 'y':
 				t.min_im = atof(optarg);
 				break;
-			case 'J':
-				t.isJulia = true;
-				break;
 			case 'M':
+				t.ty = MANDELBROT;
+				break;
+			case 'J':
+				t.ty = JULIA;
+				break;
+			case 'L':
+				t.ty = LAMBDA;
+				break;
+			case 'm':
 				t.metric = true;
 				break;
 			case 'r':
@@ -318,57 +333,86 @@ int fractal(void * s)
 			int countG = 0;
 			int countB = 0;
 
-			if(t->isJulia == true)
+			switch(t->ty)
 			{
-				c = complex<double>(t->rx, t->ry);
-				z = complex<double>(X, Y);
+				case JULIA:
+				{
+					c = complex<double>(t->rx, t->ry);
+					z = complex<double>(X, Y);
 
-				while((abs(z) <= 2) && (countR < t->iterations))
-				{
-					z = pow(z, t->exp) + c;
-					++countR;
+					while((abs(z) <= 2) && (countR < t->iterations))
+					{
+						z = pow(z, t->exp) + c;
+						++countR;
+					}
+	
+					c = complex<double>(t->gx, t->gy);
+					z = complex<double>(X, Y);
+					while((abs(z) <= 2) && (countG < t->iterations))
+					{
+						z = pow(z, t->exp) + c;
+						++countG;
+					}
+	
+					c = complex<double>(t->bx, t->by);
+					z = complex<double>(X, Y);
+					while((abs(z) <= 2) && (countB < t->iterations))
+					{
+						z = pow(z, t->exp) + c;
+						++countB;
+					}
+					break;
 				}
+				case MANDELBROT:
+				{
+					c = complex<double>(X, Y);
+					z = complex<double>(0, 0);
+					while((abs(z) <= 2) && (countR < t->iterations))
+					{
+						z = pow(z, t->exp) + c;
+						++countR;
+					}
+	
+					c = complex<double>(X, Y);
+					z = complex<double>(0, 0);
+					while((abs(z) <= 2) && (countG < t->iterations))
+					{
+						z = pow(z, t->exp) + c;
+						++countG;
+					}
 
-				c = complex<double>(t->gx, t->gy);
-				z = complex<double>(X, Y);
-				while((abs(z) <= 2) && (countG < t->iterations))
-				{
-					z = pow(z, t->exp) + c;
-					++countG;
+					c = complex<double>(X, Y);
+					z = complex<double>(0, 0);
+					while((abs(z) <= 2) && (countB < t->iterations))
+					{
+						z = pow(z, t->exp) + c;
+						++countB;
+					}
+					break;
 				}
+				case LAMBDA:
+				{
+					z = complex<double>(X, Y);
+					while((abs(z) <= 2) && (countR < t->iterations))
+					{
+						z = complex<double>(0.85, 0.6)*z*(complex<double>(1, 0) - z);
+						++countR;
+					}
+	
+					z = complex<double>(X, Y);
+					while((abs(z) <= 2) && (countG < t->iterations))
+					{
+						z = complex<double>(0.86, 0.6)*z*(complex<double>(1, 0) - z);
+						++countG;
+					}
 
-				c = complex<double>(t->bx, t->by);
-				z = complex<double>(X, Y);
-				while((abs(z) <= 2) && (countB < t->iterations))
-				{
-					z = pow(z, t->exp) + c;
-					++countB;
-				}
-			}
-			else
-			{
-				c = complex<double>(X, Y);
-				z = complex<double>(0, 0);
-				while((abs(z) <= 2) && (countR < t->iterations))
-				{
-					z = pow(z, t->exp) + c;
-					++countR;
-				}
-
-				c = complex<double>(X, Y);
-				z = complex<double>(0, 0);
-				while((abs(z) <= 2) && (countG < t->iterations))
-				{
-					z = pow(z, t->exp) + c;
-					++countG;
-				}
-
-				c = complex<double>(X, Y);
-				z = complex<double>(0, 0);
-				while((abs(z) <= 2) && (countB < t->iterations))
-				{
-					z = pow(z, t->exp) + c;
-					++countB;
+					z = complex<double>(X, Y);
+					while((abs(z) <= 2) && (countB < t->iterations))
+					{
+						z = complex<double>(0.87, 0.6)*z*(complex<double>(1, 0) - z);
+						++countB;
+					}
+					break;
 				}
 			}
 
