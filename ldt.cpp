@@ -60,7 +60,7 @@ int main(int argc, char ** argv)
 	string res;
 
 	//Default parameters
-	t.iterations = 255;
+	t.iterations = 250;
 	t.min_real = -2.0;
 	t.max_real = 2.0;
 	t.min_im = -2.0;
@@ -345,7 +345,7 @@ int fractal(void * s)
 					while((abs(z) <= 2) && (countR < t->iterations))
 					{
 						z = pow(z, t->exp) + c;
-						++countR;
+						countR += 2;
 					}
 	
 					c = complex<double>(t->gx, t->gy);
@@ -353,7 +353,7 @@ int fractal(void * s)
 					while((abs(z) <= 2) && (countG < t->iterations))
 					{
 						z = pow(z, t->exp) + c;
-						++countG;
+						countG += 2;
 					}
 	
 					c = complex<double>(t->bx, t->by);
@@ -361,7 +361,7 @@ int fractal(void * s)
 					while((abs(z) <= 2) && (countB < t->iterations))
 					{
 						z = pow(z, t->exp) + c;
-						++countB;
+						countB += 2;
 					}
 					break;
 				}
@@ -372,7 +372,7 @@ int fractal(void * s)
 					while((abs(z) <= 2) && (countR < t->iterations))
 					{
 						z = pow(z, t->exp) + c;
-						++countR;
+						countR += 2;
 					}
 	
 					c = complex<double>(X, Y);
@@ -380,7 +380,7 @@ int fractal(void * s)
 					while((abs(z) <= 2) && (countG < t->iterations))
 					{
 						z = pow(z, t->exp) + c;
-						++countG;
+						countG += 2;
 					}
 
 					c = complex<double>(X, Y);
@@ -388,7 +388,7 @@ int fractal(void * s)
 					while((abs(z) <= 2) && (countB < t->iterations))
 					{
 						z = pow(z, t->exp) + c;
-						++countB;
+						countB += 2;
 					}
 					break;
 				}
@@ -398,21 +398,21 @@ int fractal(void * s)
 					while((abs(z) <= 2) && (countR < t->iterations))
 					{
 						z = complex<double>(0.85, 0.6)*z*(complex<double>(1, 0) - z);
-						++countR;
+						countR += 2;
 					}
 	
 					z = complex<double>(X, Y);
 					while((abs(z) <= 2) && (countG < t->iterations))
 					{
-						z = complex<double>(0.86, 0.6)*z*(complex<double>(1, 0) - z);
-						++countG;
+						z = complex<double>(0.85, 0.6)*z*(complex<double>(1, 0) - z);
+						countG += 2;
 					}
 
 					z = complex<double>(X, Y);
 					while((abs(z) <= 2) && (countB < t->iterations))
 					{
-						z = complex<double>(0.87, 0.6)*z*(complex<double>(1, 0) - z);
-						++countB;
+						z = complex<double>(0.85, 0.6)*z*(complex<double>(1, 0) - z);
+						countB += 4;
 					}
 					break;
 				}
