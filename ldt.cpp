@@ -60,7 +60,7 @@ int main(int argc, char ** argv)
 	string res;
 
 	//Default parameters
-	t.iterations = 256;
+	t.iterations = 255;
 	t.min_real = -2.0;
 	t.max_real = 2.0;
 	t.min_im = -2.0;
@@ -189,6 +189,8 @@ int main(int argc, char ** argv)
 		cout << "Impossibile settare il video: " << SDL_GetError() << endl;
 		exit(1);
 	}
+
+	SDL_WM_SetCaption("Ledmantrob", "Ledmantrob");
 
 	alive = true;
 	t.screen = screen;
